@@ -6,9 +6,10 @@
 #include <uni.h>
 
 // Shared Supervisor State Variables
-volatile int supervisor_xPos = 0;
-volatile int supervisor_yPos = 0;
-volatile bool supervisor_active = false;
+volatile int supervisor_x = 0;
+volatile int supervisor_y = 0;
+volatile bool supervisor_hard_override = false;
+volatile bool supervisor_emergency_stop = false; 
 
 // Custom "instance"
 typedef struct my_platform_instance_s {
@@ -120,23 +121,36 @@ static void my_platform_on_controller_data(uni_hid_device_t* d, uni_controller_t
         case UNI_CONTROLLER_CLASS_GAMEPAD:
             gp = &ctl->gamepad;
 
+            // Bluepad32 axis values range from -512 to +511. 
+            // We map this to a standard 12-bit PWM range (-2048 to 2047) and shift so that 2048 is the center.
+            // 2048 / 512 = 4, so we multiply the axis values by 4 to scale them to the new range.
+            // Note: You may need to invert the axis by multiplying by -1 depending on motor wiring.
+
+            supervisor_x = (gp->axis_rx * 4) + 2048; 
+            supervisor_y = (gp->axis_ry * 4) + 2048;
+
             // --- ARBITRATOR: SUPERVISOR OVERRIDE LOGIC ---
             // If the Right Trigger is held down (value > 0), the supervisor takes control
             if (gp->brake > 0) {
-                supervisor_active = true;
+                logi("Supervisor override active!\n");
+                supervisor_hard_override = true;
                 
-                // Bluepad32 axis values range from -512 to +511. 
-                // We map this to a standard 8-bit PWM range (-255 to 255).
-                // Note: You may need to invert the axis by multiplying by -1 depending on motor wiring.
-
-                supervisor_xPos = (gp->axis_rx * 255) / 512; 
-                supervisor_yPos = (gp->axis_ry * 255) / 512;
-
             } else {
                 // Trigger released: Give control back to the arcade joystick
-                supervisor_active = false;
-                supervisor_xPos = 0;
-                supervisor_yPos = 0;
+                supervisor_hard_override = false;
+            }
+            
+            //  Emergency Stop: If button Y is pressed, engage emergency stop
+
+            if (gp->buttons & BUTTON_B) {
+                logi("Emergency Stop Engaged!\n");
+                supervisor_emergency_stop = true;
+            }
+
+            // Emergency Stop Disengage: If both buttons X and Y are pressed together, disengage the emergency stop latch
+            if ((gp->buttons & BUTTON_X) && (gp->buttons & BUTTON_Y)) {
+                logi("Emergency Stop Disengaged!\n");
+                supervisor_emergency_stop = false;
             }
             
             // Debugging

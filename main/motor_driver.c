@@ -14,9 +14,27 @@
 #define l_en 12
 #define targetangle 0
 
+adc_oneshot_unit_handle_t adc1_handle;
+
 void debug_drive_pins() {
     // Example function to set an LED brightness based on controller PWM value for debugging
     //int brightness = (pwm_value + 255) / 2; // Map -255..255 to 0..255
+}
+
+void kill_motors() {
+    // Function to immediately stop the motors, used for emergency stop
+    // Occurs when button B is pressed on bluetooth controller
+    gpio_set_level(r_en, 0);
+    gpio_set_level(l_en, 0);
+    
+}
+
+void enable_motors() {
+    // Function to enable the motors, used after an emergency stop is disengaged
+     // Occurs when X+Y are pressed on bluetooth controller
+    gpio_set_level(r_en, 1);
+    gpio_set_level(l_en, 1);
+    
 }
 
 void drive_motor(int xPos, int yPos) {
@@ -48,16 +66,16 @@ void drive_motor(int xPos, int yPos) {
     digitalWrite(lpwm, LOW);
   }
     */
-
+    // fix
     if (gpio_get_level(buttonPin) == 0) { // Button pressed
-        if(yPos > 0) {
+        if(yPos > 2048) {
             // Forward
-            gpio_set_level(rpwm, 1); 
-            gpio_set_level(lpwm, 1); 
-        } else if(yPos < 0) {
+            //gpio_set_level(rpwm, 1); 
+            gpio_set_level(lpwm, 0); 
+        } else if(yPos < 2048) {
             // Reverse
             gpio_set_level(rpwm, 0); 
-            gpio_set_level(lpwm, 0); 
+            //gpio_set_level(lpwm, 0); 
         } else {
             // Stop
             gpio_set_level(rpwm, 0);
@@ -116,13 +134,13 @@ void configure_pins() {
     gpio_set_level(l_en, 1);
 
 
-    // Equivalent to ledcAttach in Arduino, configure PWM channels for steering control
+    // Equivalent to ledcAttach in Arduino, configure 8-bit PWM channels for steering control
     // 1. Configure the Timer (Sets frequency and resolution)
     ledc_timer_config_t ledc_timer = {
         .speed_mode       = LEDC_LOW_SPEED_MODE, 
         .timer_num        = LEDC_TIMER_0,        // You have 4 timers available (0-3)
-        .duty_resolution  = LEDC_TIMER_8_BIT,    // 8-bit resolution (values from 0-255)
-        .freq_hz          = 5000,                // 5000 Hz frequency
+        .duty_resolution  = LEDC_TIMER_12_BIT,    // 12-bit resolution (values from 0-4095)
+        .freq_hz          = 10000,               // 10000 Hz frequency
         .clk_cfg          = LEDC_AUTO_CLK
     };
     ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
@@ -152,7 +170,6 @@ void configure_pins() {
 
 
     // configure ADC
-    adc_oneshot_unit_handle_t adc1_handle;
     adc_oneshot_unit_init_cfg_t init_config1 = {
         .unit_id = ADC_UNIT_1,
         .ulp_mode = ADC_ULP_MODE_DISABLE,
