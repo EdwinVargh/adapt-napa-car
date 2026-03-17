@@ -4,10 +4,6 @@ A custom embedded control system for a modified ride-on car for the NAPA Center.
 
 This project replaces the factory electronics(JR1958RX-2S) with an ESP32 microcontroller running a FreeRTOS architecture. It utilizes the Bluepad32 library to allow physical therapists to safely supervise and override the child's driving using a standard Bluetooth gamepad.
 
-## System Architecture
-
-The core of the software is the **Priority Arbitrator**, running continuously at 100Hz on a dedicated CPU core (Core 1). It securely multiplexes inputs between the child's physical controls (joystick/pedal) and the therapist's Bluetooth controller, ensuring safe handoffs without race conditions.
-
 ### Priority Levels
 1. **Priority 0 (E-Stop Latched):** Total system lockdown. Hardware enable pins are pulled LOW.
 2. **Priority 1 (Hard Override):** Therapist pulls the controller trigger. Child controls are completely ignored.
