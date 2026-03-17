@@ -41,7 +41,7 @@ void enable_motors() {
 }
 
 void drive_motors(int xPos, int yPos) {
-    /*
+    /* // Arduino code
     if(xPos > 2048) {
     ledcWrite(lsteer, xPos-2048);  //Turn left
     digitalWrite(rsteer, LOW);
@@ -69,7 +69,7 @@ void drive_motors(int xPos, int yPos) {
     digitalWrite(lpwm, LOW);
   }
     */
-
+    
     // STEERING CONTROL
     if (xPos > 2048 + deadband) {
         // Turn left (Activate lsteer, disable rsteer)
