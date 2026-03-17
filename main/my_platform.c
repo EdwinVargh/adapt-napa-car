@@ -156,6 +156,14 @@ static void my_platform_on_controller_data(uni_hid_device_t* d, uni_controller_t
                 supervisor_emergency_stop = false;
             }
             
+            if (supervisor_emergency_stop && (d->report_parser.set_lightbar_color != NULL)) {
+                d->report_parser.set_lightbar_color(d, 255, 0, 0); // Set lightbar to red to indicate emergency stop is engaged
+            } else {
+                d->report_parser.set_lightbar_color(d, 0, 0, 0); // Set lightbar to green to indicate normal operation
+            }
+
+
+
             // Debugging
             // Axis ry: control rumble
             
@@ -253,8 +261,7 @@ static void trigger_event_on_gamepad(uni_hid_device_t* d) {
         d->report_parser.play_dual_rumble(d, 0 /* delayed start ms */, 150 /* duration ms */, 128 /* weak magnitude */,
                                           40 /* strong magnitude */);
     }
-
-    if (d->report_parser.set_player_leds != NULL) {
+    /*if (d->report_parser.set_player_leds != NULL) {
         d->report_parser.set_player_leds(d, ins->gamepad_seat);
     }
 
@@ -263,7 +270,8 @@ static void trigger_event_on_gamepad(uni_hid_device_t* d) {
         uint8_t green = (ins->gamepad_seat & 0x02) ? 0xff : 0;
         uint8_t blue = (ins->gamepad_seat & 0x04) ? 0xff : 0;
         d->report_parser.set_lightbar_color(d, red, green, blue);
-    }
+    }*/
+    
 }
 
 //
