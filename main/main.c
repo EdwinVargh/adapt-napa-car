@@ -22,6 +22,7 @@
 #error "Must use BLUEPAD32_PLATFORM_CUSTOM"
 #endif
 
+QueueHandle_t supervisor_queue;
 
 // Defined in my_platform.c
 struct uni_platform* get_my_platform(void);
@@ -50,6 +51,9 @@ int app_main(void) {
 
     // temp: initialize pins for debugging
     configure_pins();
+
+    // Create the supervisor command queue
+    supervisor_queue = xQueueCreate(1, sizeof(supervisor_cmd_t));
 
     // Creates and assigns motor control task to core 1, so that it doesn't interfere with Bluetooth on core 0
     xTaskCreatePinnedToCore(car_control_task, "car_control", 4096, NULL, 5, NULL, 1); 

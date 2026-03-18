@@ -2,15 +2,17 @@
 // Need help? https://tinyurl.com/bluepad32-help
 
 #include <string.h>
-
+#include "arbitrator.h"
 #include <uni.h>
 
 // Shared Supervisor State Variables
-volatile int supervisor_x = 0;
-volatile int supervisor_y = 0;
-volatile bool supervisor_hard_override = false;
-volatile bool supervisor_emergency_stop = false; 
-volatile bool controller_connected = false;
+static supervisor_cmd_t current_cmd = {
+    .x = 2048,
+    .y = 2048,
+    .hard_override = false,
+    .emergency_stop = false,
+    .is_connected = false
+};
 
 // Custom "instance"
 typedef struct my_platform_instance_s {
@@ -84,13 +86,18 @@ static uni_error_t my_platform_on_device_discovered(bd_addr_t addr, const char* 
 
 static void my_platform_on_device_connected(uni_hid_device_t* d) {
     logi("custom: device connected: %p\n", d);
-    controller_connected = true; // Set the flag to indicate that the controller is connected
-
+    current_cmd.is_connected = true; // Set the flag to indicate that the controller is connected
+    xQueueOverwrite(supervisor_queue, &current_cmd); // Send the updated command to the queue
 }
 
 static void my_platform_on_device_disconnected(uni_hid_device_t* d) {
     logi("custom: device disconnected: %p\n", d);
-    controller_connected = false; // Set the flag to indicate that the controller is disconnected
+    current_cmd.is_connected = false; // Set the flag to indicate that the controller is disconnected
+
+    current_cmd.x = 2048;
+    current_cmd.y = 2048;
+    current_cmd.hard_override = false;
+    xQueueOverwrite(supervisor_queue, &current_cmd); // Send the updated command to the queue
 }
 
 static uni_error_t my_platform_on_device_ready(uni_hid_device_t* d) {
@@ -130,39 +137,39 @@ static void my_platform_on_controller_data(uni_hid_device_t* d, uni_controller_t
             // 2048 / 512 = 4, so we multiply the axis values by 4 to scale them to the new range.
             // Note: You may need to invert the axis by multiplying by -1 depending on motor wiring.
 
-            supervisor_x = (gp->axis_rx * 4) + 2048; 
-            supervisor_y = (gp->axis_ry * 4)*-1 + 2048; // Invert Y axis for typical joystick behavior (up is negative, down is positive)
+            current_cmd.x = (gp->axis_rx * 4) + 2048; 
+            current_cmd.y = (gp->axis_ry * 4)*-1 + 2048; // Invert Y axis for typical joystick behavior (up is negative, down is positive)
 
             // --- ARBITRATOR: SUPERVISOR OVERRIDE LOGIC ---
             // If the Right Trigger is held down (value > 0), the supervisor takes control
             if (gp->brake > 0) {
-                supervisor_hard_override = true;
+                current_cmd.hard_override = true;
                 
             } else {
                 // Trigger released: Give control back to the arcade joystick
-                supervisor_hard_override = false;
+                current_cmd.hard_override = false;
             }
             
             //  Emergency Stop: If button Y is pressed, engage emergency stop
 
             if (gp->buttons & BUTTON_B) {
                 //logi("Emergency Stop Engaged!\n");
-                supervisor_emergency_stop = true;
+                current_cmd.emergency_stop = true;
             }
 
             // Emergency Stop Disengage: If both buttons X and Y are pressed together, disengage the emergency stop latch
             if ((gp->buttons & BUTTON_X) && (gp->buttons & BUTTON_Y)) {
                 //logi("Emergency Stop Disengaged!\n");
-                supervisor_emergency_stop = false;
+                current_cmd.emergency_stop = false;
             }
             
-            if (supervisor_emergency_stop && (d->report_parser.set_lightbar_color != NULL)) {
+            if (current_cmd.emergency_stop && (d->report_parser.set_lightbar_color != NULL)) {
                 d->report_parser.set_lightbar_color(d, 255, 0, 0); // Set lightbar to red to indicate emergency stop is engaged
             } else {
-                d->report_parser.set_lightbar_color(d, 0, 0, 0); // Set lightbar to green to indicate normal operation
+                d->report_parser.set_lightbar_color(d, 0, 0, 255); // Set lightbar to blue to indicate normal operation
             }
 
-
+            xQueueOverwrite(supervisor_queue, &current_cmd); // Send the updated command to the queue
 
             // Debugging
             // Axis ry: control rumble
