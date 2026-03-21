@@ -67,6 +67,7 @@ void drive_motors(int xPos, int yPos) {
     // STEERING CONTROL
     if (xPos > 2048 + deadband) {
         // Turn left (Activate lsteer, disable rsteer)
+        printf("Left! %d\n", xPos);
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, xPos - (2048 + deadband));
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
         
@@ -75,6 +76,7 @@ void drive_motors(int xPos, int yPos) {
 
     } else if (xPos < 2048 - deadband) {
         // Turn right (Activate rsteer, disable lsteer)
+        printf("Right! %d\n", xPos);
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (2048 - deadband) - xPos);
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
         
@@ -93,7 +95,7 @@ void drive_motors(int xPos, int yPos) {
     // THROTTLE CONTROL
     // Note: button logic moved to arbitrator.c, so this function only focuses on controlling the motors based on the given xPos and yPos values, which are processed supervisor commands.
     if (yPos > 2048) {
-        printf("Forward!\n");
+        printf("Forward! %d\n", yPos); 
         // Forward (Activate rpwm with offset, disable lpwm)
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, yPos - 2048);
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
@@ -101,7 +103,7 @@ void drive_motors(int xPos, int yPos) {
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3, 0); 
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_3);
     } else if (yPos < 2048) {
-        printf("Reverse!\n");
+        printf("Reverse! %d\n", yPos);
         // Reverse (Activate lpwm, disable rpwm)
         ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, 0); 
         ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);

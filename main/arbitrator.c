@@ -24,7 +24,7 @@ void car_control_task(void *pvParameters) {
     int16_t current_motor_y = 2048; // Start at neutral position
 
     // At 100Hz loop speed, 20 units per loop = 1.0 second from 100% to 0%.
-    int max_step = 20;
+    int max_step = 20; // change to higher value for more aggressive acceleration/deceleration, or lower for smoother but slower response
 
     supervisor_cmd_t sup_cmd = {
         .x = 2048,
@@ -53,7 +53,7 @@ void car_control_task(void *pvParameters) {
         ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, ADC_CHANNEL_3, &child_y));
         
         // for testing when joystick is not wired
-        child_x = 2048; 
+        //child_x = 2048; 
         child_y = 1048;
         
         // Determine if the supervisor is actively moving the joystick (soft override) even if the trigger is not pulled
@@ -80,41 +80,45 @@ void car_control_task(void *pvParameters) {
             if (sup_cmd.hard_override) {
                 // PRIORITY 1: Trigger is pulled. Supervisor takes FULL control. 
                 // Even if the supervisor joystick is centered, it will force the car to stop.
-                printf("Hard Override Engaged!\n");
+                //printf("Hard Override Engaged!\n");
                 target_motor_x = sup_cmd.x;
                 target_motor_y = sup_cmd.y;
 
             } else if (supervisor_soft_override) {
                 // PRIORITY 2: Trigger is NOT pulled, but supervisor is moving the joystick.
                 // Override the kid with the supervisor's movement.
-                printf("Soft Override Engaged!\n");
+                //printf("Soft Override Engaged!\n");
                 target_motor_x = sup_cmd.x;
                 target_motor_y = sup_cmd.y;
 
             } else {
                 // PRIORITY 3: Supervisor is doing nothing. Kid has full control.
+                // Note: when testing with potentiometer, full range was met. Check if this applies for joystick
                 if (child_x < 15 || child_x > 4081 || child_y < 15 || child_y > 4081) {
                     // If the ADC reads an impossible extreme, a wire is unplugged or broken.
                     // Force all motors to stop immediately
-                    printf("ADC Reading Out of Bounds! Stopping motors for safety\n");
+                    printf("ADC Reading Out of Bounds! Stopping motors for safety. y value: %d | x value: %d\n", child_y, child_x);
                     current_motor_x = 2048;
                     current_motor_y = 2048;
                     target_motor_x = 2048;
                     target_motor_y = 2048;
                 }
+                else {
+                    if (!is_gas_pedal_pressed()) {
+                        // If the gas pedal is not pressed, ignore the kid's joystick input and keep the car stationary
+                        //printf("Gas Pedal Not Pressed! Ignoring kid's joystick input\n");
+                        child_x = 2048;
+                        child_y = 2048;
+                    }
+                    else if (child_y >= 2048){
+                        child_y += forwardOffset;
+                        //printf("Gas Pedal Pressed! Child Y with forward offset: %d\n", child_y);
+                    }
+                    target_motor_x = child_x;
+                    target_motor_y = child_y;
+                }
 
-                if (!is_gas_pedal_pressed()) {
-                    // If the gas pedal is not pressed, ignore the kid's joystick input and keep the car stationary
-                    printf("Gas Pedal Not Pressed! Ignoring kid's joystick input\n");
-                    child_x = 2048;
-                    child_y = 2048;
-                }
-                else if (child_y >= 2048){
-                    child_y += forwardOffset;
-                    printf("Gas Pedal Pressed! Child Y with forward offset: %d\n", child_y);
-                }
-                target_motor_x = child_x;
-                target_motor_y = child_y;
+                
             }
             
 
