@@ -15,10 +15,9 @@ This project replaces the factory electronics(JR1958RX-2S) with an ESP32 microco
 Because this vehicle is used by children with limited trunk stability and mobility, software safety is the primary focus:
 
 * **Hardware-Level Latching E-Stop:** Pressing the designated E-Stop button instantly pulls the `R_EN` and `L_EN` pins of the BTS7960 drivers LOW, physically severing power to the motors. The car enters a latched state and cannot be driven again until a specific two-button combo is pressed by the therapist.
-* **Feedforward Slew Rate Limiter (Anti-Jerk):** Implements a mathematical deceleration/acceleration ramp. This prevents "whiplash" if the child floors the pedal, and provides a smooth "ease stop" when letting off the gas, protecting both the passenger and the plastic gearboxes.
+* **Feedforward Slew Rate Limiter (Anti-Jerk):** Implements a deceleration/acceleration ramp. This prevents "whiplash" if the child floors the pedal, and provides a smooth "ease stop" when letting off the gas, protecting both the passenger and the plastic gearboxes.
 * **Open-Circuit Failsafe:** The ESP32 continuously monitors the child's ADC joystick lines. If a wire vibrates loose or snaps, the system detects the impossible `0` or `4095` voltage reading and immediately immobilizes the car.
-* **Steering Torque Cap:** Because the factory steering column lacks limit switches, a software PWM cap prevents the BTS7960 driver from dumping destructive stall currents into the steering motor when the wheels hit their physical turn radius limit.
-* **Idle Deadband & Creep:** Includes an adjustable joystick deadband to prevent drift, alongside an optional low-PWM baseline offset to mimic the natural "idle creep" of an automatic transmission vehicle.
+* **Idle Deadband:** Includes an adjustable joystick deadband to prevent drift
 
 ## Control Scheme (Bluetooth)
 
